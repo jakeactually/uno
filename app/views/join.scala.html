@@ -1,0 +1,16 @@
+@(roomId: Int, username: Option[String])
+
+@main("Join room #" + roomId) {
+  <div id="intro" class="border">
+    <form action="@routes.HomeController.joinRoomPost(roomId)" method="post">
+      <div>
+        <input type="text" id="username" name="username" placeholder="Enter a name" value="@username" required>
+      </div>
+      <div>
+        <button class="blue-button">
+          Join room #@roomId
+        </button>
+      </div>
+    </form>
+  </div>
+}

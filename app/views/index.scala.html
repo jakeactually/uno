@@ -1,0 +1,16 @@
+@(username: Option[String])
+
+@main("Make a room") {
+  <div id="intro" class="border">
+    <form action="@routes.HomeController.newRoom" method="post">
+      <div>
+        <input type="text" id="username" name="username" placeholder="Enter a name" value="@username" required>
+      </div>
+      <div>
+        <button class="blue-button">
+          Make a room
+        </button>
+      </div>
+    </form>
+  </div>
+}
