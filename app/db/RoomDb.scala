@@ -1,6 +1,6 @@
 package db
 
-import models.{Player, RoomPlayerItem, Tables}
+import models.{Player, Room, RoomPlayerItem, Tables}
 import slick.jdbc.H2Profile.api._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -10,25 +10,11 @@ class Room(val db: Database) {
 
   import Tables._
 
-  val countMeta = meta
-    .filter(_.metaKey === "roomsCount")
-    .map(_.metaValue)
+  def getCount: Future[Int] = db.run { rooms.length.result }
 
-  def getCount: Future[Int] = db.run {
-    countMeta.result
-  } map {
-    _.head.toInt
+  def next: Future[Int] = db.run {
+    (rooms returning rooms.map(_.id)) += Room(0, active = false)
   }
-
-  def setCount(n: Int): Future[Int] = db.run {
-    countMeta.update(n.toString)
-  }
-
-  def next: Future[Int] = for {
-    n <- getCount
-    _ <- setCount(n + 1)
-    m <- getCount
-  } yield m
 
   def join(room: Int, player: Int): Future[Int] = db.run {
     roomPlayer.filter(rp => rp.room === room && rp.player === player).result.headOption
