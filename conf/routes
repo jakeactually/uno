@@ -1,4 +1,5 @@
 GET     /                           controllers.HomeController.index
+GET     /init                       controllers.HomeController.init
 POST    /new-room                   controllers.HomeController.newRoom
 GET     /room/:id                   controllers.HomeController.room(id: Int)
 GET     /join-room/:id              controllers.HomeController.joinRoomGet(id: Int)
@@ -6,7 +7,16 @@ POST    /join-room/:id              controllers.HomeController.joinRoomPost(id: 
 POST    /expel/:roomId/:userId      controllers.HomeController.expel(roomId: Int, userId: Int)
 GET     /room-state/:roomId         controllers.HomeController.roomState(roomId: Int)
 
-GET     /play/:roomId               controllers.GameController.play(roomId: Int)
+GET     /play/:roomId               controllers.SetupController.start(roomId: Int)
+GET     /center/:roomId             controllers.SetupController.center(roomId: Int)
+GET     /hand                       controllers.SetupController.hand
+
+POST    /turn/:roomId               controllers.GameController.turn(roomId: Int)
+GET     /game/:roomId               controllers.GameController.game(roomId: Int)
+POST    /draw/:roomId               controllers.GameController.draw(roomId: Int)
+GET     /board-state/:roomId        controllers.GameController.boardState(roomId: Int)
+POST    /pass/:roomId               controllers.GameController.pass(roomId: Int)
+POST    /penalty/:roomId            controllers.GameController.penalty(roomId: Int)
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

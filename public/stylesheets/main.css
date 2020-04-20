@@ -1,13 +1,31 @@
+/* the background */
+
 body {
     margin: 0;
     background: #263238;
     font-family: sans-serif;
     font-size: 2em;
+    overflow: hidden;
 }
+
+/* defaults */
 
 input, button {
     font-size: 1em;
 }
+
+form {
+    width: 100%;
+}
+
+input[type=text] {
+    width: 100%;
+    padding: 7px;
+    box-sizing: border-box;
+    margin-bottom: 5px;
+}
+
+/* the fullscreen */
 
 main {
     width: 100%;
@@ -16,21 +34,25 @@ main {
     margin: auto;
 }
 
-.border {
-    width: 100%;
+/* the padding */
+
+.center-border {
+    display: flex;
+    align-items: center;
     height: 100%;
     padding: 20px;
     box-sizing: border-box;
 }
 
-#intro {
+.column-border {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    height: 100%;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
-#intro form {
-    width: 100%;
-}
+/* rest */
 
 .blue-button {
     width: 100%;
@@ -46,16 +68,10 @@ main {
     margin-bottom: 5px;
 }
 
-#username {
-    width: 100%;
-    padding: 7px;
-    box-sizing: border-box;
-    margin-bottom: 5px;
-}
-
 #room {
     display: flex;
     flex-direction: column;
+    height: 100%;
 }
 
 #room-id {
@@ -75,4 +91,140 @@ main {
 
 .player span {
     flex-grow: 1;
+}
+
+#game {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+#board {
+  position: absolute;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  max-width: 600px;
+  margin: auto;
+}
+
+.card {
+  position: absolute;
+  top: 80%;
+  width: 100px;
+  transition-duration: 200ms;
+}
+
+#action {
+    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    width: 90%;
+    padding: 10px;
+    margin: auto;
+    background: #d50000;
+    color: white;
+    border: none;
+    border-radius: 0px 0px 5px 5px;
+}
+
+#banner {
+    position: absolute;
+    width: 100%;
+    height: 60px;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1000;
+    padding: 10px;
+    margin: auto;
+    box-sizing: border-box;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.75);
+    color: white;
+    opacity: 0;
+}
+
+.banner-a {
+    animation: banner 1s;
+}
+
+@keyframes banner {
+    0% {
+        opacity: 0;
+        transform: translateY(100%);
+    }
+
+    20% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    80% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(-100%);
+    }
+}
+
+
+#which-color {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: white;
+    z-index: 1000;
+}
+
+.the-color {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 50%;
+}
+
+#the-red {    
+    background: #FF5555;
+}
+
+#the-green {   
+    left: 50%; 
+    background: #55AA55;
+}
+
+#the-blue {  
+    top: 50%;  
+    background: #5555FF;
+}
+
+#the-yellow {    
+    top: 50%;
+    left: 50%;
+    background: #FFAA00;
+}
+
+#choosen-color {
+    display: none;
+    position: absolute;
+    width: 100%;
+    height: 60px;
+    left: 0;
+    top: 100px;
+    z-index: 1000;
+    padding: 10px;
+    margin: auto;
+    box-sizing: border-box;
+    text-align: center;
+    color: white;
 }

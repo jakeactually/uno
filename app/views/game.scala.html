@@ -1,41 +1,27 @@
-@(roomId: Int, userId: Int, players: Seq[(Int, String)])
+@(roomId: Int)(implicit request: RequestHeader)
 
 @main("Room #" + roomId) {
-  <div id="room" class="border">
-    <div id="room-id" class="down">Room #@roomId</div>
+  <div id="game">
+    <div id="board"></div>
 
-    <div id="players">
-      @for((userId, player) <- players) {
-        <div class="player down">
-          @player
-        </div>
-      }
+    <button id="action"></button>
+
+    <div id="which-color">
+      <div id="the-red" class="the-color"></div>
+      <div id="the-green" class="the-color"></div>
+      <div id="the-blue" class="the-color"></div>
+      <div id="the-yellow" class="the-color"></div>
     </div>
 
-    <button class="blue-button down">
-      Play
-    </button>
-    <button id="invite" class="blue-button down">
-      Invite
-    </button>
-    <form action="@routes.HomeController.expel(roomId, userId)" method="post">
-      <button class="blue-button">
-        Leave
-      </button>
-    </form>
+    <div id="choosen-color">
+      color
+    </div>
   </div>
 
-  <script>
-    const socket = new WebSocket('ws://localhost:9000/room-state/@roomId');
+  <div id="banner">Invalid</div>
 
-    socket.addEventListener('message', ev => {
-        console.log(ev);
-        location.reload();
-    });
+  <input type="hidden" id="roomIdH" value="@roomId">
+  <input type="hidden" id="webSocketURLH" value="@routes.GameController.game(roomId).webSocketURL">
 
-    invite.onclick = async () => {
-      await navigator.clipboard.writeText('http://localhost:9000@routes.HomeController.joinRoomGet(roomId)');
-      alert('Room link copied');
-    };
-  </script>
+  <script src="@routes.Assets.versioned("javascripts/game.js")" type="text/javascript"></script>
 }

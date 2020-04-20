@@ -1,7 +1,7 @@
-@(roomId: Int, userId: Int, players: Seq[(Int, String)])
+@(roomId: Int, userId: Int, players: Seq[(Int, String)])(implicit request: RequestHeader)
 
 @main("Room #" + roomId) {
-  <div id="room" class="border">
+  <div id="room" class="column-border">
     <div id="room-id" class="down">Room #@roomId</div>
 
     <div id="players">
@@ -12,12 +12,11 @@
       }
     </div>
 
-    <button class="blue-button down">
-      Play
-    </button>
-    <button id="invite" class="blue-button down">
-      Invite
-    </button>
+    <a href="/play/@roomId" onclick="play(event);">
+      <button class="blue-button down" >
+        Play
+      </button>
+    </a>
     <form action="@routes.HomeController.expel(roomId, userId)" method="post">
       <button class="blue-button">
         Leave
@@ -25,17 +24,5 @@
     </form>
   </div>
 
-  <script>
-    const socket = new WebSocket('ws://localhost:9000/room-state/@roomId');
-
-    socket.addEventListener('message', ev => {
-        console.log(ev);
-        location.reload();
-    });
-
-    invite.onclick = async () => {
-      await navigator.clipboard.writeText('http://localhost:9000@routes.HomeController.joinRoomGet(roomId)');
-      alert('Room link copied');
-    };
-  </script>
+  <script src="@routes.Assets.versioned("javascripts/room.js")" type="text/javascript"></script>
 }

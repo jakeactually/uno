@@ -8,37 +8,32 @@ import models.Cards
 import play.api.libs.json.Json
 import play.api.libs.streams.ActorFlow
 import play.api.mvc._
-
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import slick.jdbc.H2Profile.api._
 
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.util.Random
 
 @Singleton
-class GameController @Inject()(val controllerComponents: ControllerComponents, val appDb: AppDb)(implicit system: ActorSystem, mat: Materializer) extends BaseController {
-
-  val playersNotifier: mutable.Map[Int, Seq[ActorRef]] = mutable.Map()
+class SetupController @Inject()
+(val controllerComponents: ControllerComponents, val appDb: AppDb)
+(implicit system: ActorSystem, mat: Materializer) extends UnoController {
 
   import appDb._
 
-  def start(roomId: Int): Action[AnyContent] = Action.async { request =>
-    roomsDb.allPlayers(roomId) flatMap { ps =>
-      if (ps.length < 2) {
-        Future.successful(BadRequest("Not enough players"))
-      } else {
-        playersDb.userOrNew(request).flatMap(roomsDb.inRoom(roomId, _)) flatMap { invited =>
-          if (invited)
-            doPlay(request, roomId)
-          else
-            Future.successful(Unauthorized("You haven't joined this room"))
-        }
+  def start(roomId: Int): Action[AnyContent] = Action.async { implicit request =>
+    context(request, roomId) { _ =>
+      roomsDb.allPlayers(roomId) flatMap { ps =>
+        if (ps.length < 2)
+          Future.successful(BadRequest("Not enough players"))
+        else
+          doPlay(roomId)
       }
     }
   }
 
-  def doPlay(request: Request[AnyContent], roomId: Int): Future[Result] = {
+  def doPlay(roomId: Int)(implicit request: RequestHeader): Future[Result] = {
     roomsDb.getActive(roomId) flatMap { active =>
       if (active) {
         Future.successful(Ok(views.html.game(roomId)))
@@ -100,21 +95,4 @@ class GameController @Inject()(val controllerComponents: ControllerComponents, v
     }
   }
 
-  def game(roomId: Int): WebSocket = WebSocket.accept[String, String] { request =>
-    ActorFlow.actorRef { out =>
-      playersNotifier(roomId) = playersNotifier.getOrElse(roomId, Seq())
-      playersNotifier(roomId) :+= out
-      Props(new PlayerActor(out))
-    }
-  }
-
-  class PlayerActor(val out: ActorRef) extends Actor {
-    def receive: Receive = {
-      case str: String => {
-        (str.substring(0, 4), str.substring(5))  match {
-          case ("card", n) => ()
-        }
-      }
-    }
-  }
 }

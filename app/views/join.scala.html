@@ -1,7 +1,7 @@
 @(roomId: Int, username: Option[String])
 
 @main("Join room #" + roomId) {
-  <div id="intro" class="border">
+  <div class="center-border">
     <form action="@routes.HomeController.joinRoomPost(roomId)" method="post">
       <div>
         <input type="text" id="username" name="username" placeholder="Enter a name" value="@username" required>

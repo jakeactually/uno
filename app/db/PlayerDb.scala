@@ -9,7 +9,7 @@ import slick.sql.FixedSqlAction
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class Player(val db: Database) {
+class PlayerDb(val db: Database) {
 
   import Tables.players
 
@@ -36,7 +36,7 @@ class Player(val db: Database) {
   }
 
   def newPlayer: Future[Int] = db.run {
-    (players returning players.map(_.id)) += Player(0, "", "")
+    (players returning players.map(_.id)) += Player(0, "", "", false)
   }
 
   def getName(id: Int): Future[Option[String]] = find(id).map(_.map(_.name))
@@ -45,12 +45,32 @@ class Player(val db: Database) {
     players.filter(_.id === userId).map(_.name).update(name)
   }
 
-  def getCards(id: Int): Future[Option[String]] = find(id).map(_.map(_.cards))
-
-  def setCards(userId: Int, cards: String): Future[Int] = db.run {
-    players.filter(_.id === userId).map(_.cards).update(cards)
+  def getCards(userId: Int): Future[Seq[Int]] = find(userId).map {
+    _.map(_.cards).getOrElse("").split(",").map(_.toInt)
   }
 
-  def setCardsRaw(userId: Int, cards: String): FixedSqlAction[Int, NoStream, Effect.Write] =
-    players.filter(_.id === userId).map(_.cards).update(cards)
+  def setCards(userId: Int, cards: Seq[Int]): Future[Int] = db.run {
+    players.filter(_.id === userId).map(_.cards).update(cards.mkString(","))
+  }
+
+  def getDrawed(id: Int): Future[Boolean] = find(id).map(_.get.drawed)
+
+  def setDrawed(userId: Int, drawed: Boolean): Future[Int] = db.run {
+    players.filter(_.id === userId).map(_.drawed).update(drawed)
+  }
+
+  def setCardsRaw(userId: Int, cards: Seq[Int]): FixedSqlAction[Int, NoStream, Effect.Write] =
+    players.filter(_.id === userId).map(_.cards).update(cards.mkString(","))
+
+  def removeCard(userId: Int, cardId: Int): Future[Unit] = for {
+    cs <- getCards(userId)
+    _ <- setCards(userId, cs.filter(_ != cardId))
+  } yield ()
+
+  def push(userId: Int, cardId: Int): Future[Unit] = pushMany(userId, Seq(cardId))
+
+  def pushMany(userId: Int, cardIds: Seq[Int]): Future[Unit] = for {
+    cs <- getCards(userId)
+    _ <- setCards(userId, cs :++ cardIds)
+  } yield ()
 }

@@ -7,16 +7,25 @@ import javax.inject._
 import play.api.libs.streams.ActorFlow
 import play.api.mvc._
 
+import scala.async.Async._
 import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
 @Singleton
-class HomeController @Inject()(val controllerComponents: ControllerComponents, val appDb: AppDb)(implicit system: ActorSystem, mat: Materializer) extends BaseController {
+class HomeController @Inject()
+(val controllerComponents: ControllerComponents, val appDb: AppDb)
+(implicit system: ActorSystem, mat: Materializer) extends UnoController {
+
+  import appDb._
 
   val playersNotifier: mutable.Map[Int, Seq[ActorRef]] = mutable.Map()
 
-  import appDb._
+  def init: Action[AnyContent] = Action.async {
+    appDb.init map { _ =>
+      Ok("Ok")
+    }
+  }
 
   def index: Action[AnyContent] = Action.async { request =>
     playersDb.username(request).map { un =>
@@ -42,27 +51,51 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents, v
   }
 
   def joinRoomGet(roomId: Int): Action[AnyContent] = Action.async { request =>
-    playersDb.username(request).map { un =>
-      Ok(views.html.join(roomId, un))
+    roomsDb.getActive(roomId) flatMap { active =>
+      if (active)
+        Future.successful(BadRequest("This room is already playing"))
+      else
+        playersDb.username(request).map { un =>
+          Ok(views.html.join(roomId, un))
+        }
     }
   }
 
   def joinRoomPost(roomId: Int): Action[AnyContent] = Action.async { request =>
-    joinRoom(request, roomId)
+    roomsDb.getActive(roomId) flatMap { active =>
+      if (active)
+        Future.successful(BadRequest("This room is already playing"))
+      else
+        joinRoom(request, roomId)
+    }
   }
 
-  def room(id: Int): Action[AnyContent] = Action.async { request =>
-    for {
-      uid <- playersDb.userOrNew(request)
-      ps <- roomsDb.allPlayers(id)
-    } yield Ok(views.html.room(id, uid, ps.map(p => (p.id, p.name))))
+  def room(id: Int): Action[AnyContent] = Action.async { implicit request =>
+    async {
+      val active = await(roomsDb.getActive(id))
+
+      if (active) {
+        BadRequest("This room is already playing")
+      } else {
+        val uid = await(playersDb.userOrNew(request))
+        val invited = await(roomsDb.inRoom(id, uid))
+
+        if (invited) {
+          val player = await(playersDb.user(request))
+          val players = await(roomsDb.allPlayers(id))
+          Ok(views.html.room(id, player.get.id, players.map(p => (p.id, p.name))))
+        } else {
+          Redirect(routes.HomeController.joinRoomGet(id))
+        }
+      }
+    }
   }
 
   def expel(roomId: Int, userId: Int): Action[AnyContent] = Action.async { request =>
     roomsDb.expel(roomId, userId).map { _ =>
       playersNotifier(roomId) = playersNotifier.getOrElse(roomId, Seq())
       playersNotifier(roomId).foreach(_ ! "update")
-      Redirect(routes.HomeController.joinRoomGet(roomId))
+      Redirect(routes.HomeController.index())
     }
   }
 
@@ -70,11 +103,11 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents, v
     ActorFlow.actorRef { out =>
       playersNotifier(roomId) = playersNotifier.getOrElse(roomId, Seq())
       playersNotifier(roomId) :+= out
-      Props(new MyWebSocketActor(out))
+      Props(new AssistantsActor(out))
     }
   }
 
-  class MyWebSocketActor(val out: ActorRef) extends Actor {
+  class AssistantsActor(val out: ActorRef) extends Actor {
     def receive: Receive = _ => ()
   }
 }

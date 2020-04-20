@@ -11,4 +11,6 @@ object Cards {
     colors.map(Plus2) ++
     List.fill(4)(ChangeColor) ++
     List.fill(4)(Plus4)
+
+  def of(index: Int): Card = all(index)  
 }

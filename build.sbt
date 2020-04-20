@@ -1,4 +1,4 @@
-name := """cuarenta"""
+name := """uno"""
 organization := "com.jakeactually"
 
 version := "1.0-SNAPSHOT"
@@ -18,6 +18,9 @@ libraryDependencies += "com.typesafe.slick" %% "slick-hikaricp" % "3.3.2"
 
 // https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc
 libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.30.1"
+
+libraryDependencies += "org.scala-lang.modules" %% "scala-async" % "0.10.0"
+libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided
 
 // Adds additional packages into Twirl
 //TwirlKeys.templateImports += "com.jakeactually.controllers._"

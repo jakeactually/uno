@@ -1,7 +1,7 @@
 @(username: Option[String])
 
 @main("Make a room") {
-  <div id="intro" class="border">
+  <div id="intro" class="center-border">
     <form action="@routes.HomeController.newRoom" method="post">
       <div>
         <input type="text" id="username" name="username" placeholder="Enter a name" value="@username" required>
