@@ -2,6 +2,7 @@ package models
 
 import slick.jdbc.SQLiteProfile.api._
 import slick.lifted.Tag
+import util.Constants
 
 case class Player(id: Int, name: String, cards: String, drawed: Boolean)
 

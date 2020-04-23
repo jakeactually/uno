@@ -1,6 +1,6 @@
 package models
 
-sealed class CardColor {
+sealed abstract class CardColor {
   def toChar: String = this match {
     case Red => "r"
     case Green => "g"
@@ -31,7 +31,7 @@ case object Green extends CardColor
 case object Blue extends CardColor
 case object Yellow extends CardColor
 
-sealed class Card {
+sealed abstract class Card {
   def toStr: String = this match {
     case Number(number, color) => color.toChar + number
     case Stop(color) => color.toChar + "-stop"
@@ -44,9 +44,9 @@ sealed class Card {
   def matches(gameState: Option[String], choosenColor: CardColor, other: Card): Option[String] = {
     gameState match {
       case Some(state) => state match {
-        case "stop" => mkErr(other.isStop)("You're blocked")
-        case "plus2" => mkErr(other.isPlus2)("You're blocked")
-        case "plus4" => mkErr(other == Plus4)("You're blocked")
+        case "stop" => mkErr(other.isStop)("You can only chain or pass")
+        case "plus2" => mkErr(other.isPlus2)("You can only chain or draw")
+        case "plus4" => mkErr(other == Plus4)("You can only chain or draw")
       }
       case None => freeMatch(choosenColor, other)
     }
@@ -61,12 +61,17 @@ sealed class Card {
       case Stop(color) => mkErr(other.isStop || other.getColor.forall(_ == color))("Wrong color")
       case Reverse(color) => mkErr(other.isReverse || other.getColor.forall(_ == color))("Wrong color")
       case Plus2(color) => mkErr(other.isPlus2 || other.getColor.forall(_ == color))("Wrong color")
-      case ChangeColor => mkErr(other.getColor.forall(_ == choosenColor))("Not chosen color")
-      case Plus4 => mkErr(other.getColor.forall(_ == choosenColor))("Not chosen color")
+      case ChangeColor => mkErr(other.getColor.forall(_ == choosenColor))("Choosen color is " + choosenColor.toStr)
+      case Plus4 => mkErr(other.getColor.forall(_ == choosenColor))("Choosen color is " + choosenColor.toStr)
     }
   }
 
   def mkErr(condition: Boolean)(msg: String): Option[String] = if (condition) None else Some(msg)
+
+  def isNormal: Boolean = this match {
+    case Number(_, _) => true
+    case _ => false
+  }
 
   def isStop: Boolean = this match {
     case Stop(_) => true

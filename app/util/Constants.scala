@@ -1,4 +1,4 @@
-package models
+package util
 
 object Constants {
   val autoInc = true

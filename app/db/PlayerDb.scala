@@ -1,17 +1,18 @@
 package db
 
-import models.{Player, Tables}
+import models.Player
 import play.api.mvc.{AnyContent, Request}
 import slick.dbio.Effect
 import slick.jdbc.H2Profile.api._
 import slick.sql.FixedSqlAction
+import util.StringSeq
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class PlayerDb(val db: Database) {
 
-  import Tables.players
+  import util.Tables.players
 
   def find(id: Int): Future[Option[models.Player]] = db.run {
     players.filter(_.id === id).result
@@ -45,8 +46,9 @@ class PlayerDb(val db: Database) {
     players.filter(_.id === userId).map(_.name).update(name)
   }
 
-  def getCards(userId: Int): Future[Seq[Int]] = find(userId).map {
-    _.map(_.cards).getOrElse("").split(",").map(_.toInt)
+  def getCards(userId: Int): Future[Seq[Int]] = find(userId).map { user =>
+    val str = user.map(_.cards).getOrElse("")
+    StringSeq.parse(str)
   }
 
   def setCards(userId: Int, cards: Seq[Int]): Future[Int] = db.run {

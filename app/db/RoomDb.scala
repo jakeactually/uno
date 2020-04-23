@@ -1,22 +1,24 @@
 package db
 
-import models.{Player, Room, RoomPlayerItem, Rooms, Tables}
+import models.{CardColor, Player, Room, RoomCompanion, RoomPlayerItem, Rooms}
 import slick.jdbc.H2Profile.api._
 
+import scala.async.Async._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import models.CardColor
-import models.Cards
 import play.api.mvc.{AnyContent, Request}
+import util.{Cards, Shuffle}
+
+import scala.annotation.tailrec
 
 class RoomDb(val db: Database) {
 
-  import Tables._
+  import util.Tables._
 
   def getCount: Future[Int] = db.run { rooms.length.result }
 
   def next: Future[Int] = db.run {
-    (rooms returning rooms.map(_.id)) += Room(0, active = false, "", "", 0, direction = false, "red", None, 0)
+    (rooms returning rooms.map(_.id)) += RoomCompanion.newRoom
   }
 
   def get(roomId: Int): Future[Room] = db.run {
@@ -38,11 +40,20 @@ class RoomDb(val db: Database) {
 
   def draw(roomId: Int): Future[Int] = drawMany(roomId, 1).map(_.head)
 
-  def drawMany(roomId: Int, amount: Int): Future[Seq[Int]] = for {
-    deck <- getDeck(roomId)
-    (x, xs) = deck.splitAt(amount)
-    _ <- setDeck(roomId, xs)
-  } yield x
+  def drawMany(roomId: Int, amount: Int): Future[Seq[Int]] = async {
+    var deck = await(getDeck(roomId))
+
+    if (deck.length <= amount) {
+      val center :+ last = await(getCenter(roomId))
+      await(setDeck(roomId, Shuffle.shuffle((deck ++ center).toArray).toSeq))
+      await(setCenter(roomId, Seq(last)))
+      deck = await(getDeck(roomId))
+    }
+
+    val (x, xs) = deck.splitAt(amount)
+    await(setDeck(roomId, xs))
+    x
+  }
 
   def push(roomId: Int, card: Int): Future[Unit] = for {
     center <- getCenter(roomId)
@@ -113,6 +124,15 @@ class RoomDb(val db: Database) {
     }.length.result
   }
 
+  def nthPlayer(room: Int, index: Int): Future[Player] = db.run {
+    {
+      for {
+        rp <- roomPlayer
+        p <- players if rp.room === room && rp.player === p.id
+      } yield p
+    }.drop(index).take(1).result.head
+  }
+
   def expel(room: Int, player: Int): Future[Int] = db.run {
     roomPlayer.filter(rp => rp.room === room && rp.player === player).delete
   }
@@ -128,23 +148,25 @@ class RoomDb(val db: Database) {
     p <- allPlayers(roomId)
   } yield p(t).id == player
 
-  def left(roomId: Int): Future[Unit] = for {
+  def left(roomId: Int): Future[Int] = for {
     c <- countPlayers(roomId)
     t <- getTurn(roomId)
     next = if (t == 0) c - 1 else t - 1
     _ <- setTurn(roomId, next)
-  } yield ()
+  } yield next
 
-  def right(roomId: Int): Future[Unit] = for {
+  def right(roomId: Int): Future[Int] = for {
     c <- countPlayers(roomId)
     t <- getTurn(roomId)
     next = if (t == c - 1) 0 else t + 1
     _ <- setTurn(roomId, next)
-  } yield ()
+  } yield next
 
   def next(roomId: Int): Future[Unit] = for {
     dir <- getDirection(roomId)
-    r <- if (dir) right(roomId) else left(roomId)
+    maybeNext <- if (dir) right(roomId) else left(roomId)
+    p <- nthPlayer(roomId, maybeNext)
+    r <- if (p.cards == "") next(roomId) else Future.successful(())
   } yield r
 
   def skip(roomId: Int): Future[Unit] = next(roomId) flatMap { _ => next(roomId) }

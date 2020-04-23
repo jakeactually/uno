@@ -1,7 +1,7 @@
 package db
 
-import models.Tables
 import slick.jdbc.H2Profile.api._
+import util.Tables
 
 import scala.concurrent.Future
 

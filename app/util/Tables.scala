@@ -1,5 +1,6 @@
-package models
+package util
 
+import models.{Players, RoomPlayer, Rooms}
 import slick.lifted.TableQuery
 
 object Tables {

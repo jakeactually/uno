@@ -1,13 +1,21 @@
-const play = ev {
-  if (document.querySelectorAll('.player').length < 2) {
+const play = ev => {
+  if (document.querySelectorAll('.player-name').length < 2) {
     alert('Not enough players');
     ev.preventDefault();
   }
 };
 
-const socket = new WebSocket('@routes.HomeController.roomState(roomId).webSocketURL');
+const connect = () => {
+    const socket = new WebSocket(webSocketURLH.value);
 
-socket.addEventListener('message', ev => {
-    console.log(ev);
-    location.reload();
-});
+    socket.onmessage = ev => {
+        console.log(ev);
+        location.reload();
+    };
+
+    socket.onerror = ev => {
+        setTimeout(connect, 1000);
+    };
+};
+
+connect();

@@ -4,11 +4,12 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.Materializer
 import db.AppDb
 import javax.inject._
-import models.Cards
+import models.{Room, RoomCompanion}
 import play.api.libs.json.Json
 import play.api.libs.streams.ActorFlow
 import play.api.mvc._
 import slick.jdbc.H2Profile.api._
+import util.{Cards, Shuffle}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -39,8 +40,9 @@ class SetupController @Inject()
         Future.successful(Ok(views.html.game(roomId)))
       } else {
         for {
+          _ <- roomsDb.set(roomId, RoomCompanion.ofId(roomId))
           _ <- deal(roomId)
-          top <- roomsDb.draw(roomId)
+          top <- normalTop(roomId)
           _ <- roomsDb.setCenter(roomId, Seq(top))
           _ <- roomsDb.setActive(roomId, active = true)
         } yield {
@@ -50,8 +52,20 @@ class SetupController @Inject()
     }
   }
 
+  def normalTop(roomId: Int): Future[Int] = roomsDb.draw(roomId) flatMap { topId =>
+    if (Cards.of(topId).isNormal) {
+      Future.successful(topId)
+    } else {
+      for {
+        deck <- roomsDb.getDeck(roomId: Int)
+        _ <- roomsDb.setDeck(roomId, deck :+ topId)
+        newTop <- normalTop(roomId)
+      } yield newTop
+    }
+  }
+
   def deal(roomId: Int): Future[Int] = roomsDb.allPlayers(roomId) flatMap { ps =>
-    var allCards = shuffle(Cards.all.map(identity).zipWithIndex.toArray).toSeq
+    var allCards = Shuffle.shuffle(Cards.all.map(identity).zipWithIndex.toArray).toSeq
 
     val io = ps.map { p =>
       val (x, xs) = allCards.splitAt(7)
@@ -62,18 +76,6 @@ class SetupController @Inject()
     db.run { DBIO.seq(io:_*) } flatMap { _ =>
       roomsDb.setDeck(roomId, allCards.map(_._2))
     }
-  }
-
-  def shuffle[T](array: Array[T]): Array[T] = {
-    for (_ <- 0 to array.length) {
-      val a = Random.nextInt(array.length)
-      val b = Random.nextInt(array.length)
-      val temp = array(a)
-      array(a) = array(b)
-      array(b) = temp
-    }
-
-    array
   }
 
   def hand: Action[AnyContent] = Action.async { request =>
@@ -87,7 +89,7 @@ class SetupController @Inject()
   def playerData(request: Request[AnyContent]): Future[Seq[Int]] = for {
     uid <- playersDb.user(request)
     cards <- playersDb.getCards(uid.get.id)
-  } yield cards map (_.toInt)
+  } yield cards
 
   def center(roomId: Int): Action[AnyContent] = Action.async {
     roomsDb.getCenter(roomId) map { c =>
@@ -95,4 +97,9 @@ class SetupController @Inject()
     }
   }
 
+  def gameOver(roomId: Int): Action[AnyContent] = Action.async { request =>
+    roomsDb.setActive(roomId, false) map { _ =>
+      Ok(views.html.theEnd(roomId))
+    }
+  }
 }

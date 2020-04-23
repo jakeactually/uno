@@ -1,20 +1,23 @@
 package controllers
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+
+import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props}
 import akka.stream.Materializer
 import db.AppDb
 import javax.inject._
-import models.{Card, CardColor, Cards, ChangeColor, Player, Plus4, Red, Room}
+import models.{Card, CardColor, ChangeColor, Player, Plus4, Red, Room}
 import play.api.libs.streams.ActorFlow
 import play.api.mvc._
 
+import scala.async.Async._
 import scala.collection.mutable
+import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import play.api.libs.json.Json
-import views.html.room
-
-import scala.async.Async._
+import util.{Cards, StringSeq}
 
 @Singleton
 class GameController @Inject()
@@ -24,6 +27,23 @@ class GameController @Inject()
   import appDb._
 
   val playersNotifier: mutable.Map[Int, Seq[ActorRef]] = mutable.Map()
+  val roomsStamp: mutable.Map[Int, Instant] = mutable.Map()
+
+  system.scheduler.scheduleAtFixedRate(0.seconds, 1.hour) { () =>
+    println("Collecting")
+
+    for ((k, _) <- roomsStamp) {
+      if (roomsStamp(k).until(Instant.now(), ChronoUnit.HOURS) > 1) {
+        playersNotifier(k).foreach(_ ! PoisonPill)
+        playersNotifier.remove(k)
+        roomsStamp.remove(k)
+      }
+    }
+  }
+
+  class PlayerActor(val out: ActorRef) extends Actor {
+    def receive: Receive = _ => ()
+  }
 
   def turn(roomId: Int): Action[AnyContent] = Action.async { request =>
     turnContext(request, roomId) { player =>
@@ -33,9 +53,6 @@ class GameController @Inject()
 
         val card1 = Cards.of(topCardId)
         val card2 = Cards.of(cardId)
-        println(card1)
-        println(card2)
-        println()
 
         val chosenColor = if (card1.isColorCard)
           await(roomsDb.getColor(roomId))
@@ -47,8 +64,8 @@ class GameController @Inject()
         card1.matches(roomState, chosenColor, card2) match {
           case Some(error) => BadRequest(error)
           case None =>
-            await(doTurn(roomId, player.id, cardId))
             await(effects(request, roomId, card2))
+            await(doTurn(roomId, player.id, cardId))
             theEnd(roomId)
         }
       }
@@ -59,6 +76,7 @@ class GameController @Inject()
     _ <- playersDb.removeCard(playerId, cardId)
     _ <- roomsDb.push(roomId, cardId)
     _ <- roomsDb.next(roomId)
+    _ <- playersDb.setDrawed(playerId, false)
   } yield ()
 
   def effects(request: Request[AnyContent], roomId: Int, card: Card): Future[Unit] = for {
@@ -89,6 +107,7 @@ class GameController @Inject()
   def theEnd(roomId: Int): Status = {
     playersNotifier(roomId) = playersNotifier.getOrElse(roomId, Seq())
     playersNotifier(roomId).foreach(_ ! "update")
+    roomsStamp(roomId) = Instant.now()
     Ok
   }
 
@@ -158,8 +177,27 @@ class GameController @Inject()
     _ <- roomsDb.next(room.id)
   } yield ()
 
-  class PlayerActor(val out: ActorRef) extends Actor {
-    def receive: Receive = _ => ()
+  def allPlayers(roomId: Int): Action[AnyContent] = Action.async { request =>
+    context(request, roomId) { _ =>
+      for {
+        ps <- roomsDb.allPlayers(roomId)
+        turn <- roomsDb.getTurn(roomId)
+      } yield Ok(Json.toJson(ps.zipWithIndex.map { case (p, i) =>
+        (twoLetters(p.name), StringSeq.parse(p.cards).length, turn == i)
+      }))
+    }
+  }
+
+  def twoLetters(fullname: String): String = {
+    val initials =
+      "\\b\\w".r.findAllMatchIn(fullname).toSeq
+
+    val letters = if (initials.length >= 2)
+      initials
+    else
+      "\\w".r.findAllMatchIn(fullname).toSeq
+
+    letters.take(2).mkString.toUpperCase
   }
 
 }

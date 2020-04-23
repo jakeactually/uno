@@ -1,4 +1,6 @@
-package models
+package util
+
+import models._
 
 object Cards {
   val colors = Seq(Red, Green, Blue, Yellow)
@@ -12,5 +14,5 @@ object Cards {
     List.fill(4)(ChangeColor) ++
     List.fill(4)(Plus4)
 
-  def of(index: Int): Card = all(index)  
+  def of(index: Int): Card = all(index)
 }

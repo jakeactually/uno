@@ -5,7 +5,7 @@ import akka.stream.Materializer
 import db.AppDb
 import javax.inject._
 import play.api.libs.streams.ActorFlow
-import play.api.mvc._
+import play.api.mvc.{request, _}
 
 import scala.async.Async._
 import scala.collection.mutable
@@ -40,33 +40,46 @@ class HomeController @Inject()
     }
   }
 
-  def joinRoom(request: Request[AnyContent], roomId: Int): Future[Result] = for {
-    uid <- playersDb.userOrNew(request)
-    _ <- playersDb.setName(uid, request.body.asFormUrlEncoded.get("username").head)
-    _ <- roomsDb.join(roomId, uid)
-  } yield {
+  def joinRoom(request: Request[AnyContent], roomId: Int): Future[Result] = async {
+    val uid = await(playersDb.userOrNew(request))
+    await(playersDb.setName(uid, request.body.asFormUrlEncoded.get("username").head))
+    await(roomsDb.join(roomId, uid))
+
     playersNotifier(roomId) = playersNotifier.getOrElse(roomId, Seq())
     playersNotifier(roomId).foreach(_ ! "update")
     Redirect(routes.HomeController.room(roomId)).withSession("userId" -> uid.toString)
   }
 
   def joinRoomGet(roomId: Int): Action[AnyContent] = Action.async { request =>
-    roomsDb.getActive(roomId) flatMap { active =>
-      if (active)
-        Future.successful(BadRequest("This room is already playing"))
-      else
-        playersDb.username(request).map { un =>
+    async {
+      if (await(roomsDb.countPlayers(roomId)) >= 8) {
+        BadRequest("Only up to 8 players")
+      } else {
+        val active = await(roomsDb.getActive(roomId))
+
+        if (active) {
+          BadRequest("This room is already playing")
+        } else {
+          val un = await(playersDb.username(request))
           Ok(views.html.join(roomId, un))
         }
+      }
     }
   }
 
   def joinRoomPost(roomId: Int): Action[AnyContent] = Action.async { request =>
-    roomsDb.getActive(roomId) flatMap { active =>
-      if (active)
-        Future.successful(BadRequest("This room is already playing"))
-      else
-        joinRoom(request, roomId)
+    async {
+      if (await(roomsDb.countPlayers(roomId)) >= 8) {
+        BadRequest("Only up to 8 players")
+      } else {
+        val active = await(roomsDb.getActive(roomId))
+
+        if (active) {
+          BadRequest("This room is already playing")
+        } else {
+          await(joinRoom(request, roomId))
+        }
+      }
     }
   }
 
