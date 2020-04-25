@@ -79,10 +79,8 @@ const fetchBoard = async topIsColorCard => {
     message('Chosen color is ' + color);
   }
 
-  action.innerText = 'Stand by';
-  action.className = 'stand-by';
   if (!myTurn) return;
-  action.className = '';
+  action.className = 'my-turn';
 
   if (state == "plus2") {
     action.innerText = 'Draw ' + count * 2;

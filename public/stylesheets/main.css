@@ -124,14 +124,14 @@ main {
     width: 90%;
     padding: 10px;
     margin: auto;
-    background: #d50000;
+    background: gray;
     color: white;
     border: none;
     border-radius: 0px 0px 5px 5px;
 }
 
-#action.stand-by {
-    background: gray;
+#action.my-turn {
+    background: #d50000;
 }
 
 #banner {
@@ -272,4 +272,8 @@ main {
 
 #game-over-wrap {
     width: 100%;
+}
+
+#invite-text {
+    color: white;
 }

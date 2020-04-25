@@ -2,7 +2,11 @@
 
 @main("Room #" + roomId) {
   <div id="room" class="column-border">
-    <div id="room-id" class="down">Room #@roomId</div>
+    <div id="room-id">Room #@roomId</div>
+
+    <p id="invite-text">
+      You can invite others by sharing the link of this page
+    </p>
 
     <div id="player-names">
       @for((userId, player) <- players) {
