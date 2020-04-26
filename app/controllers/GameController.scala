@@ -85,11 +85,13 @@ class GameController @Inject()
       roomsDb.setColor(roomId, newColor.get)
     }
 
-    _ <- where (card.canChain) {
+    _ <- if (card.canChain) {
       for {
         _ <- roomsDb.setGameState(roomId, Some(card.toGameState))
         _ <- roomsDb.increaseChainCount(roomId)
       } yield ()
+    } else {
+      roomsDb.setChainCount(roomId, 0)
     }
 
     _ <- where (card.isReverse) {

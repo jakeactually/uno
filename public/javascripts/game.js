@@ -4,6 +4,8 @@ const webSocketURL = webSocketURLH.value;
 let hand = [];
 let center = [];
 
+const fetchW = (u, o) => fetch(u, Object.assign(o || {}, { credentials: 'same-origin' }));
+
 const fullFetch = async () => {
   board.innerHTML = '';
   stack = 0;
@@ -14,21 +16,21 @@ const fullFetch = async () => {
 
 const fetchHand = async () => {
   hand = [];
-  const newHand = await fetch('/hand').then(r => r.json());
+  const newHand = await fetchW('/hand').then(r => r.json());
   for (const card of newHand) addCard(card);
   renderPos();
 };
 
 const fetchCenter = async () => {
   center = [];
-  const newCenter  = await fetch('/center/' + roomId).then(r => r.json());
+  const newCenter  = await fetchW('/center/' + roomId).then(r => r.json());
   for (const card of newCenter) toCenter(makeCard(card));
   const [cardId, cardName] = newCenter.pop();
   await fetchBoard(cardName.match(/plus4|color/));
 };
 
 const handUpdate = async () => {
-  const newHand  = await fetch('/hand').then(r => r.json());
+  const newHand  = await fetchW('/hand').then(r => r.json());
 
   if (hand.length < newHand.length) {
       const diff = newHand.slice(hand.length);
@@ -41,7 +43,7 @@ const handUpdate = async () => {
 };
 
 const centerUpdate = async () => {
-  const newCenter  = await fetch('/center/' + roomId).then(r => r.json());
+  const newCenter  = await fetchW('/center/' + roomId).then(r => r.json());
 
   if (newCenter.length < center.length) {
     await fullFetch();
@@ -62,7 +64,7 @@ const centerUpdate = async () => {
 };
 
 const fetchPlayers = async () => {
-  const data  = await fetch('/all-players/' + roomId).then(r => r.json());
+  const data  = await fetchW('/all-players/' + roomId).then(r => r.json());
 
   if (data.filter(([name, score]) => score != 0).length <= 1)
     location.href = '/game-over/' + roomId;
@@ -72,40 +74,42 @@ const fetchPlayers = async () => {
 };
 
 const fetchBoard = async topIsColorCard => {
-  const board  = await fetch('/board-state/' + roomId).then(r => r.json());
+  const board  = await fetchW('/board-state/' + roomId).then(r => r.json());
   const [myTurn, drawed, color, state, count] = board;
 
   if (topIsColorCard) {
     message('Chosen color is ' + color);
   }
 
+  action.innerText = 'Stand by';
+  action.className = '';
   if (!myTurn) return;
   action.className = 'my-turn';
 
   if (state == "plus2") {
     action.innerText = 'Draw ' + count * 2;
     action.onclick = async () => {
-        await fetch('/penalty/' + roomId, { method: 'post' });
+        await fetchW('/penalty/' + roomId, { method: 'post' });
     };
   } else if (state == "plus4") {
     action.innerText = 'Draw ' + count * 4;
     action.onclick = async () => {
-        await fetch('/penalty/' + roomId, { method: 'post' });
+        await fetchW('/penalty/' + roomId, { method: 'post' });
     };
   } else if (state == "stop") {
     action.innerText = 'Pass';
     action.onclick = async () => {
-        await fetch('/penalty/' + roomId, { method: 'post' });
+        await fetchW('/penalty/' + roomId, { method: 'post' });
     };
   } else if (drawed) {
     action.innerText = 'Pass';
     action.onclick = async () => {
-        await fetch('/pass/' + roomId, { method: 'post' });
+        await fetchW('/pass/' + roomId, { method: 'post' });
     };
   } else {
     action.innerText = 'Draw';
     action.onclick = async () => {
-        await fetch('/draw/' + roomId, { method: 'post' });
+        await fetchW('/draw/' + roomId, { method: 'post' });
         await handUpdate();
     };
   }
@@ -121,7 +125,7 @@ const makeCard = ([id, name]) => {
   img.ondragstart = ev => ev.preventDefault();
   img.cardId = id;
   img.cardName = name;
-  board.appendChild(img);  
+  board.appendChild(img);
   return img;
 };
 
@@ -202,8 +206,8 @@ handH2.on('swipeup', async () => {
   }
 
   const options = { method: 'post', body: body };
-  const res = await fetch('/turn/' + roomId, options);
-  
+  const res = await fetchW('/turn/' + roomId, options);
+
   if (res.ok) {
     toCenter(card);
     hand.splice(half, 1);
