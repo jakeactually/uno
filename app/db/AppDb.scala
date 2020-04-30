@@ -13,9 +13,9 @@ class AppDb {
 
   def init: Future[Unit] = db.run {
     val schemas =
-      Tables.rooms.schema ++
-      Tables.roomPlayer.schema ++
-      Tables.players.schema
+      Tables.roomsD(false).schema ++
+      Tables.roomPlayerD(false).schema ++
+      Tables.playersD(false).schema
 
     schemas.createIfNotExists
   }

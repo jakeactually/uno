@@ -2,12 +2,11 @@ package models
 
 import slick.jdbc.SQLiteProfile.api._
 import slick.lifted.Tag
-import util.Constants
 
 case class RoomPlayerItem(id: Int, room: Int, player: Int)
 
-class RoomPlayer(tag: Tag) extends Table[RoomPlayerItem](tag, "room_player") {
-  def id = if (Constants.autoInc)
+class RoomPlayer(tag: Tag, autoInc: Boolean) extends Table[RoomPlayerItem](tag, "room_player") {
+  def id = if (autoInc)
     column[Int]("rowid", O.PrimaryKey, O.AutoInc)
   else
     column[Int]("rowid", O.PrimaryKey)

@@ -2,17 +2,16 @@ package models
 
 import slick.jdbc.SQLiteProfile.api._
 import slick.lifted.Tag
-import util.Constants
 
 case class Room(id: Int,
-                active: Boolean,
-                deck: String,
-                center: String,
-                turn: Int,
-                direction: Boolean,
-                color: String,
-                gameState: Option[String],
-                chainCount: Int)
+    active: Boolean,
+    deck: String,
+    center: String,
+    turn: Int,
+    direction: Boolean,
+    color: String,
+    gameState: Option[String],
+    chainCount: Int)
 
 object RoomCompanion {
   def newRoom: Room = Room(0, active = false, "", "", 0, direction = false, "red", None, 0)
@@ -20,8 +19,8 @@ object RoomCompanion {
   def ofId(id: Int): Room = Room(id, active = false, "", "", 0, direction = false, "red", None, 0)
 }
 
-class Rooms(tag: Tag) extends Table[Room](tag, "rooms") {
-  def id = if (Constants.autoInc)
+class Rooms(tag: Tag, autoInc: Boolean) extends Table[Room](tag, "rooms") {
+  def id = if (autoInc)
     column[Int]("rowid", O.PrimaryKey, O.AutoInc)
   else
     column[Int]("rowid", O.PrimaryKey)

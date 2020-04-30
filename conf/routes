@@ -1,5 +1,4 @@
 GET     /                           controllers.HomeController.index
-GET     /init                       controllers.HomeController.init
 POST    /new-room                   controllers.HomeController.newRoom
 GET     /room/:id                   controllers.HomeController.room(id: Int)
 GET     /join-room/:id              controllers.HomeController.joinRoomGet(id: Int)

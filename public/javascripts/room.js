@@ -6,7 +6,9 @@ const play = ev => {
 };
 
 const connect = () => {
-    const socket = new WebSocket(webSocketURLH.value);
+    const socket = new WebSocket(
+        webSocketURLH.value.replace('ws', location.protocol == 'https:' ? 'wss' : 'ws')
+    );
 
     socket.onmessage = ev => {
         console.log(ev);

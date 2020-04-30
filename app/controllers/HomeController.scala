@@ -21,15 +21,11 @@ class HomeController @Inject()
 
   val playersNotifier: mutable.Map[Int, Seq[ActorRef]] = mutable.Map()
 
-  def init: Action[AnyContent] = Action.async {
-    appDb.init map { _ =>
-      Ok("Ok")
-    }
-  }
-
   def index: Action[AnyContent] = Action.async { request =>
-    playersDb.username(request).map { un =>
-      Ok(views.html.index(un))
+    appDb.init flatMap { _ =>
+      playersDb.username(request).map { un =>
+        Ok(views.html.index(un))
+      }
     }
   }
 
