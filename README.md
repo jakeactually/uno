@@ -2,4 +2,4 @@
 
 An online UNO game
 
-[http://jakeactually.com:4000/](Demo)
+[Demo](http://jakeactually.com:4000/)
